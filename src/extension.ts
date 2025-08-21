@@ -10,6 +10,8 @@ export function activate(context: vscode.ExtensionContext) {
     const completionProvider = new AnthropicCompletionProvider(anthropicService);
     const codeActionProvider = new AnthropicCodeActionProvider(anthropicService);
 
+    checkAndPromptForApiKey();
+
     const openPanelCommand = vscode.commands.registerCommand('anthropicChat.openPanel', () => {
         chatProvider.show();
     });
@@ -46,6 +48,10 @@ export function activate(context: vscode.ExtensionContext) {
     const clearHistoryCommand = vscode.commands.registerCommand('anthropicChat.clearHistory', () => {
         chatProvider.clearHistory();
         vscode.window.showInformationMessage('Chat history cleared');
+    });
+
+    const setApiKeyCommand = vscode.commands.registerCommand('anthropicChat.setApiKey', () => {
+        promptForApiKey();
     });
 
     const fixErrorCommand = vscode.commands.registerCommand('anthropicChat.fixError', 
@@ -89,6 +95,7 @@ export function activate(context: vscode.ExtensionContext) {
         explainSelectionCommand,
         generateCodeCommand,
         clearHistoryCommand,
+        setApiKeyCommand,
         fixErrorCommand,
         improveCodeCommand,
         refactorSelectionCommand,
@@ -98,6 +105,61 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     vscode.window.showInformationMessage('Anthropic Copilot Chat Extension activated!');
+}
+
+async function checkAndPromptForApiKey(): Promise<void> {
+    const config = vscode.workspace.getConfiguration('anthropicChat');
+    const apiKey = config.get<string>('apiKey', '');
+    
+    if (!apiKey) {
+        const action = await vscode.window.showInformationMessage(
+            'Welcome to Anthropic Copilot Chat Extension! To get started, you need to configure your Anthropic API key.',
+            'Enter API Key',
+            'Open Settings',
+            'Later'
+        );
+        
+        if (action === 'Enter API Key') {
+            await promptForApiKey();
+        } else if (action === 'Open Settings') {
+            await vscode.commands.executeCommand('workbench.action.openSettings', 'anthropicChat.apiKey');
+        }
+    }
+}
+
+async function promptForApiKey(): Promise<void> {
+    const apiKey = await vscode.window.showInputBox({
+        prompt: 'Enter your Anthropic API key',
+        placeHolder: 'sk-ant-api03-...',
+        password: true,
+        ignoreFocusOut: true,
+        validateInput: (value: string) => {
+            if (!value) {
+                return 'API key is required';
+            }
+            if (!value.startsWith('sk-ant-')) {
+                return 'API key should start with "sk-ant-"';
+            }
+            if (value.length < 20) {
+                return 'API key appears to be too short';
+            }
+            return null;
+        }
+    });
+    
+    if (apiKey) {
+        const config = vscode.workspace.getConfiguration('anthropicChat');
+        await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
+        
+        vscode.window.showInformationMessage(
+            '✅ API key saved successfully! You can now use all Anthropic Copilot features.',
+            'Open Chat Panel'
+        ).then(action => {
+            if (action === 'Open Chat Panel') {
+                vscode.commands.executeCommand('anthropicChat.openPanel');
+            }
+        });
+    }
 }
 
 export function deactivate() {}

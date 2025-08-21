@@ -43,6 +43,11 @@
         "category": "Anthropic Chat"
       },
       {
+        "command": "anthropicChat.setApiKey",
+        "title": "Set API Key",
+        "category": "Anthropic Chat"
+      },
+      {
         "command": "anthropicChat.fixError",
         "title": "Fix Error with AI",
         "category": "Anthropic Chat"
