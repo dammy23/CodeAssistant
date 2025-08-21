@@ -1,12 +1,14 @@
 import * as vscode from 'vscode';
 import { AnthropicChatProvider } from './chatProvider';
 import { AnthropicCompletionProvider } from './completionProvider';
+import { AnthropicCodeActionProvider } from './codeActionProvider';
 import { AnthropicService } from './anthropicService';
 
 export function activate(context: vscode.ExtensionContext) {
     const anthropicService = new AnthropicService();
     const chatProvider = new AnthropicChatProvider(context, anthropicService);
     const completionProvider = new AnthropicCompletionProvider(anthropicService);
+    const codeActionProvider = new AnthropicCodeActionProvider(anthropicService);
 
     const openPanelCommand = vscode.commands.registerCommand('anthropicChat.openPanel', () => {
         chatProvider.show();
@@ -46,9 +48,39 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage('Chat history cleared');
     });
 
+    const fixErrorCommand = vscode.commands.registerCommand('anthropicChat.fixError', 
+        (document: vscode.TextDocument, diagnostic: vscode.Diagnostic, range: vscode.Range) => {
+            codeActionProvider.fixError(document, diagnostic, range);
+        }
+    );
+
+    const improveCodeCommand = vscode.commands.registerCommand('anthropicChat.improveCode',
+        (document: vscode.TextDocument, diagnostic: vscode.Diagnostic, range: vscode.Range) => {
+            codeActionProvider.improveCode(document, diagnostic, range);
+        }
+    );
+
+    const refactorSelectionCommand = vscode.commands.registerCommand('anthropicChat.refactorSelection',
+        (document: vscode.TextDocument, range: vscode.Range) => {
+            codeActionProvider.refactorSelection(document, range);
+        }
+    );
+
     const completionProviderDisposable = vscode.languages.registerInlineCompletionItemProvider(
         { pattern: '**' },
         completionProvider
+    );
+
+    const codeActionProviderDisposable = vscode.languages.registerCodeActionsProvider(
+        { pattern: '**' },
+        codeActionProvider,
+        {
+            providedCodeActionKinds: [
+                vscode.CodeActionKind.QuickFix,
+                vscode.CodeActionKind.Refactor,
+                vscode.CodeActionKind.RefactorRewrite
+            ]
+        }
     );
 
     context.subscriptions.push(
@@ -57,7 +89,11 @@ export function activate(context: vscode.ExtensionContext) {
         explainSelectionCommand,
         generateCodeCommand,
         clearHistoryCommand,
+        fixErrorCommand,
+        improveCodeCommand,
+        refactorSelectionCommand,
         completionProviderDisposable,
+        codeActionProviderDisposable,
         chatProvider
     );
 

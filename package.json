@@ -41,6 +41,21 @@
         "command": "anthropicChat.clearHistory",
         "title": "Clear History",
         "category": "Anthropic Chat"
+      },
+      {
+        "command": "anthropicChat.fixError",
+        "title": "Fix Error with AI",
+        "category": "Anthropic Chat"
+      },
+      {
+        "command": "anthropicChat.improveCode",
+        "title": "Improve Code with AI",
+        "category": "Anthropic Chat"
+      },
+      {
+        "command": "anthropicChat.refactorSelection",
+        "title": "Refactor Selection with AI",
+        "category": "Anthropic Chat"
       }
     ],
     "views": {

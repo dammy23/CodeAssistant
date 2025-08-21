@@ -45,12 +45,35 @@ export class AnthropicChatProvider implements vscode.Disposable {
     }
 
     public askAboutFile(fileName: string, content: string): void {
-        const message = `Please analyze this file: ${fileName}\n\n\`\`\`\n${content.substring(0, 2000)}\n\`\`\`\n\nWhat does this file do and how does it fit into the project?`;
+        const message = `Please analyze this file and explain its purpose, functionality, and how it fits into the project architecture:
+
+FILE: ${fileName}
+\`\`\`
+${content.substring(0, 2000)}${content.length > 2000 ? '\n... (truncated)' : ''}
+\`\`\`
+
+Please provide:
+1. A summary of what this file does
+2. Key functions/classes and their purposes  
+3. Dependencies and relationships with other parts of the codebase
+4. Any potential improvements or concerns`;
         this.sendMessageToChat(message);
     }
 
     public explainSelection(selectedText: string, fileName: string): void {
-        const message = `Please explain this code from ${fileName}:\n\n\`\`\`\n${selectedText}\n\`\`\``;
+        const message = `Please provide a detailed explanation of this code snippet:
+
+FILE: ${fileName}
+\`\`\`
+${selectedText}
+\`\`\`
+
+Please explain:
+1. What this code does step-by-step
+2. The purpose and logic behind each part
+3. Any design patterns or techniques used
+4. Potential edge cases or considerations
+5. Suggestions for improvement if any`;
         this.sendMessageToChat(message);
     }
 
@@ -93,11 +116,11 @@ export class AnthropicChatProvider implements vscode.Disposable {
         });
 
         try {
-            const workspaceContext = this.anthropicService.buildContextFromWorkspace();
+            const workspaceContext = this.anthropicService.buildEnhancedContextFromWorkspace();
             const contextualMessages: AnthropicMessage[] = [
                 {
                     role: 'user',
-                    content: `Context about the current workspace:\n${workspaceContext}\n\nUser question: ${userMessage}`
+                    content: this.anthropicService.buildAdvancedChatPrompt(userMessage, workspaceContext)
                 }
             ];
 

@@ -96,7 +96,7 @@ export class AnthropicService {
         const messages: AnthropicMessage[] = [
             {
                 role: 'user',
-                content: `Context:\n${context}\n\nComplete the following code:\n${prompt}`
+                content: this.buildAdvancedCompletionPrompt(prompt, context)
             }
         ];
 
@@ -122,5 +122,109 @@ export class AnthropicService {
         }
 
         return context;
+    }
+
+    buildEnhancedContextFromWorkspace(): string {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            return 'No workspace folder detected.';
+        }
+
+        const config = this.getConfig();
+        const contextDepth = config.get<number>('contextDepth', 5);
+        
+        let context = `WORKSPACE ANALYSIS:
+Project: ${workspaceFolders[0].name}
+Root: ${workspaceFolders[0].uri.fsPath}
+
+`;
+        
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            const fileName = activeEditor.document.fileName;
+            const language = activeEditor.document.languageId;
+            const content = activeEditor.document.getText();
+            const lineCount = activeEditor.document.lineCount;
+            
+            context += `CURRENT FILE CONTEXT:
+File: ${fileName}
+Language: ${language}
+Lines: ${lineCount}
+Content Preview:
+\`\`\`${language}
+${content.substring(0, 2000)}${content.length > 2000 ? '\n... (truncated)' : ''}
+\`\`\`
+
+`;
+        }
+
+        const openEditors = vscode.window.visibleTextEditors;
+        if (openEditors.length > 1) {
+            context += `OPEN FILES:
+${openEditors.map(editor => `- ${editor.document.fileName} (${editor.document.languageId})`).join('\n')}
+
+`;
+        }
+
+        return context;
+    }
+
+    buildAdvancedChatPrompt(userMessage: string, workspaceContext: string): string {
+        return `You are Claude, an AI assistant specialized in software development. You have expertise across multiple programming languages, frameworks, and development practices.
+
+WORKSPACE CONTEXT:
+${workspaceContext}
+
+ROLE & CAPABILITIES:
+- Expert code analysis and explanation
+- Architecture and design pattern guidance  
+- Debugging and troubleshooting assistance
+- Code review and improvement suggestions
+- Best practices recommendations
+
+RESPONSE GUIDELINES:
+1. Provide accurate, helpful, and actionable advice
+2. Use specific examples from the user's codebase when relevant
+3. Explain complex concepts clearly with step-by-step reasoning
+4. Suggest concrete improvements with code examples
+5. Consider security, performance, and maintainability implications
+
+USER QUESTION:
+${userMessage}
+
+RESPONSE:`;
+    }
+
+    private buildAdvancedCompletionPrompt(prompt: string, context: string): string {
+        const activeEditor = vscode.window.activeTextEditor;
+        const language = activeEditor?.document.languageId || 'unknown';
+        
+        return `You are an expert ${language} developer with deep knowledge of best practices, design patterns, and modern development techniques.
+
+CONTEXT ANALYSIS:
+${context}
+
+CURRENT CODE TO COMPLETE:
+\`\`\`${language}
+${prompt}
+\`\`\`
+
+INSTRUCTIONS:
+1. Analyze the surrounding code context to understand the intent and patterns
+2. Consider the file structure, imports, and existing code style
+3. Generate a completion that:
+   - Follows the established code patterns and conventions
+   - Uses appropriate variable names and function signatures
+   - Implements best practices for ${language}
+   - Is syntactically correct and logically sound
+   - Maintains consistency with the existing codebase
+
+COMPLETION REQUIREMENTS:
+- Provide ONLY the code that should complete the current line/block
+- Do not include explanations or comments unless they exist in the surrounding code
+- Ensure the completion integrates seamlessly with existing code
+- Consider edge cases and error handling where appropriate
+
+COMPLETION:`;
     }
 }

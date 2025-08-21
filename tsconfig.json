@@ -11,6 +11,7 @@
     "strict": true
   },
   "exclude": [
+    "test-files/**/*",
     "node_modules",
     ".vscode-test"
   ]
