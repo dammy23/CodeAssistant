@@ -9,6 +9,8 @@ export function activate(context: vscode.ExtensionContext) {
     const chatProvider = new AnthropicChatProvider(context, anthropicService);
     const completionProvider = new AnthropicCompletionProvider(anthropicService);
     const codeActionProvider = new AnthropicCodeActionProvider(anthropicService);
+    
+    context.subscriptions.push(anthropicService);
 
     checkAndPromptForApiKey();
 
@@ -150,6 +152,15 @@ async function promptForApiKey(): Promise<void> {
     if (apiKey) {
         const config = vscode.workspace.getConfiguration('anthropicChat');
         await config.update('apiKey', apiKey, vscode.ConfigurationTarget.Global);
+        
+        console.log('Extension: API key saved to configuration');
+        
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+        const freshConfig = vscode.workspace.getConfiguration('anthropicChat');
+        const savedKey = freshConfig.get<string>('apiKey', '');
+        console.log('Extension: Verification read after delay:', savedKey ? 'SUCCESS' : 'FAILED');
+        console.log('Extension: Config inspection:', freshConfig.inspect('apiKey'));
         
         vscode.window.showInformationMessage(
             '✅ API key saved successfully! You can now use all Anthropic Copilot features.',

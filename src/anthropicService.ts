@@ -24,16 +24,50 @@ export interface AnthropicResponse {
 }
 
 export class AnthropicService {
+    private cachedApiKey: string | null = null;
+    private configChangeListener: vscode.Disposable | null = null;
+
+    constructor() {
+        this.setupConfigurationListener();
+        this.refreshApiKey();
+    }
+
+    private setupConfigurationListener(): void {
+        this.configChangeListener = vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration('anthropicChat.apiKey')) {
+                console.log('AnthropicService: Configuration changed, refreshing API key');
+                this.refreshApiKey();
+            }
+        });
+    }
+
+    private refreshApiKey(): void {
+        const config = vscode.workspace.getConfiguration('anthropicChat');
+        this.cachedApiKey = config.get<string>('apiKey', '') || null;
+        console.log('AnthropicService: API key refreshed from config...', this.cachedApiKey ? 'FOUND' : 'NOT FOUND');
+    }
+
     private getConfig() {
         return vscode.workspace.getConfiguration('anthropicChat');
     }
 
     private getApiKey(): string {
-        const apiKey = this.getConfig().get<string>('apiKey', '');
-        if (!apiKey) {
+        if (!this.cachedApiKey) {
+            this.refreshApiKey();
+        }
+        
+        console.log('AnthropicService: Using cached API key...', this.cachedApiKey ? 'FOUND' : 'NOT FOUND');
+        
+        if (!this.cachedApiKey) {
             throw new Error('Anthropic API key not configured. Please set it in VS Code settings.');
         }
-        return apiKey;
+        return this.cachedApiKey;
+    }
+
+    public dispose(): void {
+        if (this.configChangeListener) {
+            this.configChangeListener.dispose();
+        }
     }
 
     async sendMessage(messages: AnthropicMessage[]): Promise<string> {
