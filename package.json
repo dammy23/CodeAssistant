@@ -1,0 +1,152 @@
+{
+  "name": "anthropic-copilot-chat-extension",
+  "displayName": "Anthropic Copilot Chat Extension",
+  "description": "A VS Code extension that provides intelligent code completions and an interactive chatbot powered by Anthropic's Claude AI",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.103.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning",
+    "Snippets"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "anthropicChat.openPanel",
+        "title": "Open Panel",
+        "category": "Anthropic Chat"
+      },
+      {
+        "command": "anthropicChat.askAboutCurrentFile",
+        "title": "Ask About Current File",
+        "category": "Anthropic Chat"
+      },
+      {
+        "command": "anthropicChat.explainSelection",
+        "title": "Explain Selection",
+        "category": "Anthropic Chat"
+      },
+      {
+        "command": "anthropicChat.generateCode",
+        "title": "Generate Code",
+        "category": "Anthropic Chat"
+      },
+      {
+        "command": "anthropicChat.clearHistory",
+        "title": "Clear History",
+        "category": "Anthropic Chat"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "anthropicAssistant",
+          "name": "Anthropic Assistant",
+          "when": "true"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Anthropic Chat",
+      "properties": {
+        "anthropicChat.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Anthropic API key for Claude AI",
+          "order": 1
+        },
+        "anthropicChat.model": {
+          "type": "string",
+          "enum": [
+            "claude-3-sonnet-20240229",
+            "claude-3-haiku-20240307",
+            "claude-3-opus-20240229"
+          ],
+          "default": "claude-3-sonnet-20240229",
+          "description": "Claude model to use",
+          "order": 2
+        },
+        "anthropicChat.baseUrl": {
+          "type": "string",
+          "default": "https://api.anthropic.com",
+          "description": "Custom API endpoint (optional)",
+          "order": 3
+        },
+        "anthropicChat.temperature": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "default": 0.7,
+          "description": "Response creativity vs consistency (0.0-1.0)",
+          "order": 4
+        },
+        "anthropicChat.maxTokens": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 4096,
+          "default": 1024,
+          "description": "Maximum response length in tokens",
+          "order": 5
+        },
+        "anthropicChat.contextDepth": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 5,
+          "description": "Number of files to include in context",
+          "order": 6
+        },
+        "anthropicChat.completionDelay": {
+          "type": "number",
+          "minimum": 100,
+          "maximum": 2000,
+          "default": 500,
+          "description": "Delay before showing inline suggestions (ms)",
+          "order": 7
+        },
+        "anthropicChat.autoCompleteEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable inline code completions",
+          "order": 8
+        },
+        "anthropicChat.streamingResponses": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time response streaming",
+          "order": 9
+        },
+        "anthropicChat.panelPosition": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right",
+            "bottom"
+          ],
+          "default": "left",
+          "description": "Chat panel position",
+          "order": 10
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "@types/vscode": "^1.103.0",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "axios": "^1.11.0"
+  }
+}

@@ -1,0 +1,126 @@
+import * as vscode from 'vscode';
+import axios, { AxiosResponse } from 'axios';
+
+export interface AnthropicMessage {
+    role: 'user' | 'assistant';
+    content: string;
+}
+
+export interface AnthropicResponse {
+    content: Array<{
+        type: string;
+        text: string;
+    }>;
+    id: string;
+    model: string;
+    role: string;
+    stop_reason: string;
+    stop_sequence: null;
+    type: string;
+    usage: {
+        input_tokens: number;
+        output_tokens: number;
+    };
+}
+
+export class AnthropicService {
+    private getConfig() {
+        return vscode.workspace.getConfiguration('anthropicChat');
+    }
+
+    private getApiKey(): string {
+        const apiKey = this.getConfig().get<string>('apiKey', '');
+        if (!apiKey) {
+            throw new Error('Anthropic API key not configured. Please set it in VS Code settings.');
+        }
+        return apiKey;
+    }
+
+    async sendMessage(messages: AnthropicMessage[]): Promise<string> {
+        try {
+            const config = this.getConfig();
+            const apiKey = this.getApiKey();
+            const model = config.get<string>('model', 'claude-3-sonnet-20240229');
+            const maxTokens = config.get<number>('maxTokens', 1024);
+            const temperature = config.get<number>('temperature', 0.7);
+            const baseUrl = config.get<string>('baseUrl', 'https://api.anthropic.com');
+
+            const response: AxiosResponse<AnthropicResponse> = await axios.post(
+                `${baseUrl}/v1/messages`,
+                {
+                    model,
+                    max_tokens: maxTokens,
+                    temperature,
+                    messages
+                },
+                {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01'
+                    },
+                    timeout: 30000
+                }
+            );
+
+            if (response.data.content && response.data.content.length > 0) {
+                return response.data.content[0].text;
+            }
+
+            throw new Error('No content in response');
+        } catch (error: any) {
+            if (error.response) {
+                const status = error.response.status;
+                const message = error.response.data?.error?.message || error.response.statusText;
+                
+                if (status === 401) {
+                    throw new Error('Invalid API key. Please check your Anthropic API key in settings.');
+                } else if (status === 429) {
+                    throw new Error('Rate limit exceeded. Please try again later.');
+                } else if (status >= 500) {
+                    throw new Error('Anthropic service is temporarily unavailable. Please try again later.');
+                } else {
+                    throw new Error(`API Error (${status}): ${message}`);
+                }
+            } else if (error.code === 'ECONNABORTED') {
+                throw new Error('Request timeout. Please check your internet connection.');
+            } else if (error.code === 'ENOTFOUND' || error.code === 'ECONNREFUSED') {
+                throw new Error('Network error. Please check your internet connection.');
+            } else {
+                throw new Error(`Unexpected error: ${error.message}`);
+            }
+        }
+    }
+
+    async getCompletion(prompt: string, context: string): Promise<string> {
+        const messages: AnthropicMessage[] = [
+            {
+                role: 'user',
+                content: `Context:\n${context}\n\nComplete the following code:\n${prompt}`
+            }
+        ];
+
+        return this.sendMessage(messages);
+    }
+
+    buildContextFromWorkspace(): string {
+        const workspaceFolders = vscode.workspace.workspaceFolders;
+        if (!workspaceFolders) {
+            return '';
+        }
+
+        const config = this.getConfig();
+        const contextDepth = config.get<number>('contextDepth', 5);
+        
+        let context = `Workspace: ${workspaceFolders[0].name}\n`;
+        
+        const activeEditor = vscode.window.activeTextEditor;
+        if (activeEditor) {
+            const fileName = activeEditor.document.fileName;
+            const content = activeEditor.document.getText();
+            context += `\nCurrent file: ${fileName}\n${content.substring(0, 2000)}\n`;
+        }
+
+        return context;
+    }
+}
